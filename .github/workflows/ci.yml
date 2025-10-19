@@ -30,6 +30,6 @@ jobs:
       run: pytest tests/ --maxfail=1 --disable-warnings -q > tests/report.txt
 
     - name: Comment test report using CML
-      uses: iterative/cml@v3
+      uses: iterative/cml@v2
       with:
         report: tests/report.txt
