@@ -20,21 +20,31 @@ jobs:
         python -m pip install --upgrade pip
         pip install pandas pytest dvc[gcs]
     
-    - name: Setup CML
-      uses: iterative/setup-cml@v2
+    - name: Authenticate to Google Cloud
+      run: |
+        echo '${{ secrets.GCS_CREDENTIALS }}' > ${HOME}/gcs-credentials.json
+        export GOOGLE_APPLICATION_CREDENTIALS=${HOME}/gcs-credentials.json
     
     - name: Pull data from DVC
-      run: dvc pull
       env:
-        GDRIVE_CREDENTIALS_DATA: ${{ secrets.GDRIVE_CREDENTIALS_DATA }}
+        GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/gcs-credentials.json
+      run: |
+        echo '${{ secrets.GCS_CREDENTIALS }}' > gcs-credentials.json
+        dvc pull
     
     - name: Run tests
-      run: pytest tests/ --maxfail=1 --disable-warnings -q
+      run: |
+        pytest tests/ --maxfail=1 --disable-warnings -q | tee report.txt
+    
+    - name: Setup CML
+      if: github.event_name == 'pull_request'
+      uses: iterative/setup-cml@v2
     
     - name: Create CML report
+      if: github.event_name == 'pull_request'
       env:
         REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        pytest tests/ --maxfail=1 --disable-warnings -q > report.txt
+        echo "## Test Results" > report.md
         cat report.txt >> report.md
         cml comment create report.md
